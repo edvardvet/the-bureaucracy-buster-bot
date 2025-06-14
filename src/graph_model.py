@@ -14,7 +14,7 @@ llm = ChatOpenAI(
     model="gpt-4",
     openai_api_key=os.getenv("OPENAI_API_KEY"),
     openai_api_base=os.getenv("PROXY_URL"),
-    temperature=0.01
+    temperature=0.00    
 )
 
 
@@ -41,7 +41,50 @@ def query_or_respond(state: MessagesState) -> dict:
 tools = ToolNode([retrieve])
 
 
+# def generate(state: MessagesState) -> dict:
+#     recent_tool_messages = []
+#     for message in reversed(state["messages"]):
+#         if message.type == "tool":
+#             recent_tool_messages.append(message)
+#         else:
+#             break
+#     tool_messages = recent_tool_messages[::-1]
+
+#     docs_content = "\n\n".join(tool_msg.content for tool_msg in tool_messages)
+
+#     system_message_content = (
+#         "You are a helpful, professional AI assistant for question-answering tasks.\n"
+#         "Use the following pieces of retrieved context to answer the question accurately.\n"
+#         "If there is no information on the issue in the documents provided, don't make anything up, just say that you can't give an answer.\n"
+#         "Provide a detailed and comprehensive response, explaining each step clearly.\n"
+#         "If you don't know the answer, say that you don't know, but suggest where to look.\n"
+#         "Your response should be at least 3-5 sentences long and logically structured.\n"
+#         "\n"
+#         "Always format your responses using:\n"
+#         "- Clear section titles (e.g., 🔹 Problem, ✅ Solution, ⚠️ Pitfalls);\n"
+#         "- Bullet points or numbered steps for instructions;\n"
+#         "- Definitions for technical terms, if needed;\n"
+#         "- A friendly, professional tone with no unnecessary fluff.\n"
+#         "\n"
+#         "If the question is unclear, politely ask for clarification with examples.\n"
+#         "Conclude your response with a suggestion for the next step or a summary.\n"
+#         "\n\n"
+#         f"{docs_content}")
+
+#     conversation_messages = [
+#         message
+#         for message in state["messages"]
+#         if message.type in ("human", "system")
+#            or (message.type == "ai" and not message.tool_calls)
+#     ]
+
+#     prompt = [SystemMessage(system_message_content)] + conversation_messages
+#     response = llm.invoke(prompt)
+#     return {"messages": [response]}
+
 def generate(state: MessagesState) -> dict:
+    """Генерирует ответ на основе найденной информации, логируя источники в консоль."""
+
     recent_tool_messages = []
     for message in reversed(state["messages"]):
         if message.type == "tool":
@@ -50,26 +93,45 @@ def generate(state: MessagesState) -> dict:
             break
     tool_messages = recent_tool_messages[::-1]
 
-    docs_content = "\n\n".join(tool_msg.content for tool_msg in tool_messages)
+    docs_content = []
+    for idx, doc in enumerate(tool_messages, 1):
+        content = doc.content.strip()
+        source = doc.additional_kwargs.get("source", "Unknown Source")
+        print(f"\n🔎 [Context {idx}]\n{content}\n📎 Source: {source}\n{'-' * 60}")
+        docs_content.append(f"📄 Source {idx}: {content}")
 
-    system_message_content = (
-        "You are an assistant for question-answering tasks. "
-        "Use the following pieces of retrieved context to answer the question. "
-        "Provide a detailed and comprehensive response, explaining each step clearly. "
-        "If you don't know the answer, say that you don't know. "
-        "Your response should be at least 3-5 sentences long."
+    context_block = "\n\n".join(docs_content)
+
+    system_prompt = (
+        "You are a helpful, professional AI assistant for question-answering tasks.\n"
+        "Use the following pieces of retrieved context to answer the question accurately.\n"
+        "If there is no information on the issue in the documents provided, don't make anything up, just say that you can't give an answer.\n"
+        "Provide a detailed and comprehensive response, explaining each step clearly.\n"    
+        "Give an answer in the same language in which the question was asked.\n"
+        "If you don't know the answer, say that you don't know, but suggest where to look.\n"
+        "Your response should be at least 3-5 sentences long and logically structured.\n"
+        "\n"
+        "Always format your responses using:\n"
+        "- Clear section titles (e.g., 🔹 Problem, ✅ Solution, ⚠️ Pitfalls);\n"
+        "- Bullet points or numbered steps for instructions;\n"
+        "- Definitions for technical terms, if needed;\n"
+        "- A friendly, professional tone with no unnecessary fluff.\n"
+        "\n"
+        "If the question is unclear, politely ask for clarification with examples.\n"
+        "Conclude your response with a suggestion for the next step or a summary.\n"
         "\n\n"
-        f"{docs_content}")
+        "Relevant context:\n"
+        f"{context_block}"
+    )
 
     conversation_messages = [
-        message
-        for message in state["messages"]
-        if message.type in ("human", "system")
-           or (message.type == "ai" and not message.tool_calls)
+        msg for msg in state["messages"]
+        if msg.type in ("human", "system") or (msg.type == "ai" and not msg.tool_calls)
     ]
 
-    prompt = [SystemMessage(system_message_content)] + conversation_messages
+    prompt = [SystemMessage(system_prompt)] + conversation_messages
     response = llm.invoke(prompt)
+
     return {"messages": [response]}
 
 
