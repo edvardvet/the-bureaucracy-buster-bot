@@ -34,25 +34,22 @@ poetry install
 ### Настройка окружения
 Создайте файл .env в корне проекта:
 
-TELEGRAM_TOKEN=your_telegram_bot_token
-OPENAI_API_KEY=your_openai_key
-PROXY_URL=your_proxy_if_needed
-LANGCHAIN_API_KEY=your_langchain_key
+- TELEGRAM_TOKEN=your_telegram_bot_token
+- OPENAI_API_KEY=your_openai_key
+- PROXY_URL=your_proxy_if_needed
+- LANGCHAIN_API_KEY=your_langchain_key
 
 ### Запуск
-poetry run python src/main.py
+- poetry run python src/main.py
 
-
-
-![Pipyline](/src/images/diagram.png)
 ## 📌 Цели проекта
 🔍 Автоматизация юридических справок по законодательству РФ
 
 🧠 Практика работы с современными NLP-технологиями:
-1.Vector Search
-2.RAG (Retrieval-Augmented Generation)
-3.LangGraph для сложных workflow
+- Vector Search
+- RAG (Retrieval-Augmented Generation)
+- LangGraph для сложных workflow
 
 🎓 Портфолио с проектом, имеющим практическую ценность
-
+<img src="./src/images/diagram.png" alt="architecture" width="500"/>
 <div align="center"> <sub>Создано с ❤️ для борьбы с бюрократией</sub> </div>
